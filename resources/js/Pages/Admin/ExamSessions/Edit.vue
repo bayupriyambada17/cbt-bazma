@@ -86,7 +86,15 @@
                                     </div>
                                 </div>
                             </div>
-
+                            <div class="mb-4">
+                                <label>Token</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.token"
+                                    readonly
+                                />
+                            </div>
                             <button
                                 type="submit"
                                 class="btn btn-md btn-primary border-0 shadow me-2"
@@ -150,6 +158,7 @@ export default {
             exam_id: props.exam_session.exam_id,
             start_time: props.exam_session.start_time,
             end_time: props.exam_session.end_time,
+            token: props.exam_session.token,
         });
 
         //method "submit"
@@ -163,6 +172,7 @@ export default {
                     exam_id: form.exam_id,
                     start_time: form.start_time,
                     end_time: form.end_time,
+                    token: form.token,
                 },
                 {
                     onSuccess: () => {

@@ -63,6 +63,11 @@ Route::prefix('admin')->group(function () {
 
         Route::delete('/exam_sessions/{exam_session}/enrolle/{exam_group}/destroy', [ExamSessionController::class, 'destroyEnrolle'])->name('admin.exam_sessions.destroyEnrolle');
 
+        Route::post('/exam_sessions/{id}/generate-token', [ExamSessionController::class, 'generateToken']);
+        Route::post('/exam_sessions/update-status', [ExamSessionController::class, 'updateStatus'])->name('exam.status.update');
+
+
+
         //route index reports
         Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
 
@@ -108,5 +113,7 @@ Route::prefix('student')->group(function () {
         Route::post('/exam-end', [App\Http\Controllers\Student\ExamController::class, 'endExam'])->name('student.exams.endExam');
 
         Route::get('/exam-result/{exam_group_id}', [App\Http\Controllers\Student\ExamController::class, 'resultExam'])->name('student.exams.resultExam');
+
+        Route::post('/exam/close-tab', [App\Http\Controllers\Student\ExamController::class, 'closeTab'])->name('student.exam.closeTab');
     });
 });

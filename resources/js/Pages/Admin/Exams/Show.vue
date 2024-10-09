@@ -24,6 +24,12 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 30%" class="fw-bold">
+                                            Salin ExamId Excel
+                                        </td>
+                                        <td>{{ exam.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 30%" class="fw-bold">
                                             Nama Ujian
                                         </td>
                                         <td>{{ exam.title }}</td>

@@ -11,13 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('exam_sessions', function (Blueprint $table) {
+        Schema::create('teachers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('exam_id')->references('id')->on('exams')->cascadeOnDelete();
-            $table->string('title');
-            $table->dateTime('start_time');
-            $table->dateTime('end_time');
-            $table->string('token')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('exam_sessions');
+        Schema::dropIfExists('teachers');
     }
 };

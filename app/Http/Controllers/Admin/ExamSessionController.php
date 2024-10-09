@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Carbon\Carbon;
 use App\Models\Exam;
 use App\Models\Student;
 use App\Models\ExamGroup;
+use App\Models\ExamStatus;
 use App\Models\ExamSession;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
 
 class ExamSessionController extends Controller
 {
@@ -63,19 +65,39 @@ class ExamSessionController extends Controller
             'exam_id'       => 'required',
             'start_time'    => 'required',
             'end_time'      => 'required',
+            'token'         => 'required|string|max:6', // Tambahkan validasi token
+
         ]);
 
         //create exam_session
         ExamSession::create([
             'title'         => $request->title,
             'exam_id'       => $request->exam_id,
-            'start_time'    => Carbon::parse($request->start_time)->format('Y-m-d H:i:s'),
-            'end_time'      => Carbon::parse($request->end_time)->format('Y-m-d H:i:s'),
+            'start_time'    => $request->start_time,
+            'end_time'      => $request->end_time,
+            'token'         => $request->token,
         ]);
 
         //redirect
         return redirect()->route('admin.exam_sessions.index');
     }
+
+    public function generateToken($id)
+    {
+
+        $examSession = ExamSession::find($id);
+
+        if (!$examSession) {
+            return response()->json(['message' => 'Exam session not found'], 404);
+        }
+
+        $newToken = Str::random(6);
+
+        // Update only the exam session with the new token
+        $examSession->token = $newToken;
+        $examSession->save();
+    }
+
 
     /**
      * Display the specified resource.
@@ -210,10 +232,16 @@ class ExamSessionController extends Controller
             $student = Student::findOrFail($student_id);
 
             //create exam_group
-            ExamGroup::create([
+            $exam = ExamGroup::create([
                 'exam_id'         => $request->exam_id,
                 'exam_session_id' => $exam_session->id,
                 'student_id'      => $student->id,
+            ]);
+
+            ExamStatus::create([
+                'student_id' => $student->id,
+                'exam_session_id' => $exam_session->id,
+                'token' => $exam->exam_session->token,
             ]);
         }
 
@@ -221,12 +249,35 @@ class ExamSessionController extends Controller
         return redirect()->route('admin.exam_sessions.show', $exam_session->id);
     }
 
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'exam_session_id' => 'required|exists:exam_sessions,id',
+            'status' => 'required|in:pending,completed,failed',
+        ]);
+
+        // Update atau buat status ujian untuk siswa
+        $examStatus = ExamStatus::updateOrCreate(
+            [
+                'student_id' => $request->student_id,
+                'exam_session_id' => $request->exam_session_id,
+            ],
+            ['status' => $request->status]
+        );
+
+        return response()->json(['message' => 'Status berhasil diperbarui.', 'status' => $examStatus]);
+    }
+
     public function destroyEnrolle(ExamSession $exam_session, ExamGroup $exam_group)
     {
-        //delete exam_group
         $exam_group->delete();
+        // exam status with id delete
+        $examStatus = ExamStatus::where('student_id', $exam_group->student_id)->where('exam_session_id', $exam_session->id)->first();
 
-        //redirect
+        if ($examStatus) {
+            $examStatus->delete();
+        }
         return redirect()->route('admin.exam_sessions.show', $exam_session->id);
     }
 }

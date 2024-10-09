@@ -17,6 +17,7 @@ class ExamSession extends Model
         'title',
         'start_time',
         'end_time',
+        'token',
     ];
 
     public function exam_groups()

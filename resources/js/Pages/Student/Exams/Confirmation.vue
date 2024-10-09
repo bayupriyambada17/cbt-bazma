@@ -64,11 +64,17 @@
                         </table>
                     </div>
                     <div v-if="grade.end_time == null">
-                        <Link
+                        <!-- <Link
                             :href="`/student/exam-start/${exam_group.id}`"
                             class="btn btn-md btn-success border-0 shadow w-100 mt-2 text-white"
                             >Mulai</Link
+                        > -->
+                        <button
+                            class="btn btn-md btn-success border-0 shadow w-100 mt-2 text-white"
+                            @click="openTokenModal"
                         >
+                            Mulai
+                        </button>
                     </div>
                     <div v-else>
                         <button
@@ -91,6 +97,15 @@ import LayoutStudent from "../../../Layouts/Student.vue";
 //import Head and Link from Inertia
 import { Head, Link } from "@inertiajs/vue3";
 
+//import ref
+import { ref, onMounted, onBeforeUnmount } from "vue";
+
+//import axios
+import axios from "axios";
+
+//import sweet alert2
+import Swal from "sweetalert2";
+
 export default {
     //layout
     layout: LayoutStudent,
@@ -105,6 +120,32 @@ export default {
     props: {
         exam_group: Object,
         grade: Object,
+    },
+
+    methods: {
+        openTokenModal() {
+            Swal.fire({
+                title: "Masukkan Token",
+                input: "text",
+                inputPlaceholder: "Masukkan Token Anda",
+                showCancelButton: true,
+                confirmButtonText: "Mulai Ujian",
+                cancelButtonText: "Batal",
+                inputValidator: (value) => {
+                    if (!value) {
+                        return "Token tidak boleh kosong!";
+                    }
+                },
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const token = result.value;
+                    // Redirect ke ujian dengan token
+                    this.$inertia.visit(
+                        `/student/exam-start/${this.exam_group.id}?token=${token}`
+                    );
+                }
+            });
+        },
     },
 };
 </script>

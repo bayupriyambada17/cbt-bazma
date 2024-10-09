@@ -256,7 +256,7 @@ import LayoutStudent from "../../../Layouts/Student.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 
 //import ref
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 //import VueCountdown
 import VueCountdown from "@chenfengyuan/vue-countdown";
@@ -299,7 +299,10 @@ export default {
         const counter = ref(0);
 
         //define state duration
-        const duration = ref(props.duration.duration);
+        const savedDuration = localStorage.getItem(`duration-${props.id}`);
+        const duration = ref(
+            savedDuration ? parseInt(savedDuration) : props.duration.duration
+        );
 
         //handleChangeDuration
         const handleChangeDuration = () => {
@@ -309,11 +312,14 @@ export default {
             //increment counter
             counter.value = counter.value + 1;
 
+            // Save the current duration to localStorage
+            localStorage.setItem(`duration-${props.id}`, duration.value);
+
             //cek jika durasi di atas 0
             if (duration.value > 0) {
                 //update duration if 10 seconds
                 if (counter.value % 10 == 1) {
-                    //update duration
+                    //update duration on the server
                     axios.put(
                         `/student/exam-duration/update/${props.duration.id}`,
                         {
@@ -324,9 +330,60 @@ export default {
             }
         };
 
-        //metohd prevPage
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // Kirim permintaan untuk menyelesaikan ujian
+                axios
+                    .post("/student/exam-end", {
+                        exam_group_id: props.exam_group.id,
+                        exam_id: props.exam_group.exam.id,
+                        exam_session_id: props.exam_group.exam_session.id,
+                        duration: duration.value,
+                        status_token: "close-tab",
+                    })
+                    .then(() => {
+                        // Tampilkan pesan bahwa ujian telah selesai
+                        Swal.fire({
+                            title: "Ujian Selesai!",
+                            text: "Anda meninggalkan tab, sehingga ujian otomatis diselesaikan.",
+                            icon: "warning",
+                            confirmButtonText: "Lihat hasil",
+                        }).then(() => {
+                            // Redirect ke halaman hasil atau dashboard
+                            router.get(
+                                `/student/exam-result/${props.exam_group.id}`
+                            );
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("Error menyelesaikan ujian:", error);
+                        Swal.fire({
+                            title: "Error!",
+                            text: "Gagal menyelesaikan ujian. Silakan coba lagi.",
+                            icon: "error",
+                        });
+                    });
+            }
+        };
+
+        onMounted(() => {
+            document.addEventListener(
+                "visibilitychange",
+                handleVisibilityChange
+            );
+        });
+
+        // Bersihkan listener saat unmounted
+        onBeforeUnmount(() => {
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange
+            );
+        });
+
+        //method prevPage
         const prevPage = () => {
-            //update duration
+            //update duration on the server
             axios.put(`/student/exam-duration/update/${props.duration.id}`, {
                 duration: duration.value,
             });
@@ -337,7 +394,7 @@ export default {
 
         //method nextPage
         const nextPage = () => {
-            //update duration
+            //update duration on the server
             axios.put(`/student/exam-duration/update/${props.duration.id}`, {
                 duration: duration.value,
             });
@@ -348,12 +405,12 @@ export default {
 
         //method clickQuestion
         const clickQuestion = (index) => {
-            //update duration
+            //update duration on the server
             axios.put(`/student/exam-duration/update/${props.duration.id}`, {
                 duration: duration.value,
             });
 
-            //redirect to questin
+            //redirect to question
             router.get(`/student/exam/${props.id}/${index + 1}`);
         };
 
@@ -379,6 +436,9 @@ export default {
                 exam_id: props.exam_group.exam.id,
                 exam_session_id: props.exam_group.exam_session.id,
             });
+
+            // Hapus durasi dari localStorage setelah ujian selesai
+            localStorage.removeItem(`duration-${props.id}`);
 
             //show success alert
             Swal.fire({

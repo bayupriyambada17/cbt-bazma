@@ -240,6 +240,8 @@ class ExamController extends Controller
         return redirect()->route('admin.exams.show', $exam->id);
     }
 
+
+
     /**
      * editQuestion
      *

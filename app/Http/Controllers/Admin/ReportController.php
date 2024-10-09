@@ -57,7 +57,10 @@ class ReportController extends Controller
             //get grades / nilai
             $grades = Grade::with('student', 'exam.classroom', 'exam.lesson', 'exam_session')
                 ->where('exam_id', $exam->id)
-                ->where('exam_session_id', $exam_session->id)
+                ->when($exam_session, function ($query) use ($exam_session) {
+                    $query->where('exam_session_id', $exam_session->id);
+                })
+                // ->where('exam_session_id', $exam_session->id)
                 ->get();
         } else {
             $grades = [];

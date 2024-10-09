@@ -51,6 +51,8 @@
                                         <th class="border-0">Ujian</th>
                                         <th class="border-0">Sesi</th>
                                         <th class="border-0">Siswa</th>
+                                        <th class="border-0">Token</th>
+                                        <!-- New Token Column -->
                                         <th class="border-0">Mulai</th>
                                         <th class="border-0">Selesai</th>
                                         <th
@@ -61,7 +63,6 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <div class="mt-2"></div>
                                 <tbody>
                                     <tr
                                         v-for="(
@@ -104,6 +105,10 @@
                                                 exam_session.exam_groups.length
                                             }}
                                         </td>
+                                        <td class="text-center">
+                                            {{ exam_session.token }}
+                                        </td>
+                                        <!-- Display Token -->
                                         <td>{{ exam_session.start_time }}</td>
                                         <td>{{ exam_session.end_time }}</td>
                                         <td class="text-center">
@@ -121,6 +126,17 @@
                                                 type="button"
                                                 ><i class="fa fa-pencil-alt"></i
                                             ></Link>
+                                            <button
+                                                title="Generate Token"
+                                                @click.prevent="
+                                                    generateToken(
+                                                        exam_session.id
+                                                    )
+                                                "
+                                                class="btn btn-sm btn-warning border-0 me-2"
+                                            >
+                                                <i class="fa fa-sync"></i>
+                                            </button>
                                             <button
                                                 @click.prevent="
                                                     destroy(exam_session.id)
@@ -141,55 +157,35 @@
         </div>
     </div>
 </template>
-
 <script>
-//import layout
+// Import layout and other components
 import LayoutAdmin from "../../../Layouts/Admin.vue";
-
-//import component pagination
 import Pagination from "../../../Components/Pagination.vue";
-
-//import Heade and Link from Inertia
 import { Head, Link, router } from "@inertiajs/vue3";
-
-//import ref from vue
 import { ref } from "vue";
-
-//import sweet alert2
 import Swal from "sweetalert2";
 
 export default {
-    //layout
     layout: LayoutAdmin,
-
-    //register component
     components: {
         Head,
         Link,
         Pagination,
     },
-
-    //props
     props: {
         exam_sessions: Object,
     },
-
-    //inisialisasi composition API
     setup() {
-        //define state search
         const search = ref(
             "" || new URL(document.location).searchParams.get("q")
         );
 
-        //define method search
         const handleSearch = () => {
             router.get("/admin/exam_sessions", {
-                //send params "q" with value from state "search"
                 q: search.value,
             });
         };
 
-        //define method destroy
         const destroy = (id) => {
             Swal.fire({
                 title: "Apakah Anda yakin?",
@@ -202,7 +198,6 @@ export default {
             }).then((result) => {
                 if (result.isConfirmed) {
                     router.delete(`/admin/exam_sessions/${id}`);
-
                     Swal.fire({
                         title: "Deleted!",
                         text: "Sesi Ujian Berhasil Dihapus!.",
@@ -214,14 +209,44 @@ export default {
             });
         };
 
-        //return
+        // Method to generate token
+        const generateToken = async (examSessionId) => {
+            const { value: newToken } = await Swal.fire({
+                title: "Generate Token Baru",
+                text: "Apakah Anda ingin meng-generate token baru?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Ya, Genarate Token!",
+                cancelButtonText: "Tidak, Batal!",
+            });
+
+            if (newToken) {
+                try {
+                    // Call your API to generate a new token
+                    await router.post(
+                        `/admin/exam_sessions/${examSessionId}/generate-token`
+                    );
+                    Swal.fire(
+                        "Success!",
+                        "New token has been generated.",
+                        "success"
+                    );
+                } catch (error) {
+                    Swal.fire(
+                        "Error!",
+                        "There was an error generating the token.",
+                        "error"
+                    );
+                }
+            }
+        };
+
         return {
             search,
             handleSearch,
             destroy,
+            generateToken,
         };
     },
 };
 </script>
-
-<style></style>

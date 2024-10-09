@@ -7,6 +7,8 @@ use App\Models\Grade;
 use App\Models\Answer;
 use App\Models\Question;
 use App\Models\ExamGroup;
+use App\Models\ExamStatus;
+use App\Models\ExamSession;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -45,7 +47,7 @@ class ExamController extends Controller
      * @param  mixed $id
      * @return void
      */
-    public function startExam($id)
+    public function startExam(Request $request, $id)
     {
         //get exam group
         $exam_group = ExamGroup::with('exam.lesson', 'exam_session', 'student.classroom')
@@ -53,6 +55,17 @@ class ExamController extends Controller
             ->where('id', $id)
             ->first();
 
+        if (!$exam_group) {
+            return redirect()->route('student.dashboard');
+        }
+
+        $exam_session = $exam_group->exam_session;
+        $token = $exam_session->token;
+
+        //cek apakah token yang diberikan sama dengan token di exam_session
+        if ($request->input('token') !== $token) {
+            return redirect()->route('student.dashboard')->withErrors(['error' => 'Token tidak valid atau expired']);
+        }
         //get grade / nilai
         $grade = Grade::where('exam_id', $exam_group->exam->id)
             ->where('exam_session_id', $exam_group->exam_session->id)
@@ -119,6 +132,20 @@ class ExamController extends Controller
             }
             $question_order++;
         }
+
+        // jika status valid, maka dia dapat mengerjakan. Jika tidak maka dia akan mengunjungi halaman sebelumnya / token expired
+        // Create or update exam status
+        ExamStatus::updateOrCreate(
+            [
+                'exam_session_id' => $exam_session->id,
+                'student_id' => auth()->guard('student')->user()->id,
+            ],
+            [
+                'status_token' => 'valid',
+                'token' => $token
+            ],
+        );
+
 
         //redirect ke ujian halaman 1
         return redirect()->route('student.exams.show', [
@@ -293,7 +320,20 @@ class ExamController extends Controller
         $grade->grade           = $grade_exam;
         $grade->update();
 
-        //redirect hasil
+
+        // Update status ujian di tabel exam_status
+        $examStatus = ExamStatus::where('exam_session_id', $request->exam_session_id)
+            ->where('student_id', auth()->guard('student')->user()->id)
+            ->first();
+
+        if ($request->has('status_token') && $request->status_token === 'close-tab') {
+            $examStatus->status_token = 'close-tab';
+            $examStatus->save();
+        } else {
+            $examStatus->status_token = 'completed';
+            $examStatus->save();
+        }
+
         return redirect()->route('student.exams.resultExam', $request->exam_group_id);
     }
 
@@ -322,5 +362,28 @@ class ExamController extends Controller
             'exam_group' => $exam_group,
             'grade'      => $grade,
         ]);
+    }
+
+    public function closeTab(Request $request)
+    {
+        // Dapatkan ID sesi ujian dari request
+        $examSessionId = $request->input('exam_session_id');
+
+        // Dapatkan data ExamStatus untuk sesi ujian dan student yang sedang login
+        $examStatus = ExamStatus::where('exam_session_id', $examSessionId)
+            ->where('student_id', auth()->guard('student')->user()->id)
+            ->first();
+
+        // Jika tidak ditemukan, return error
+        if (!$examStatus) {
+            return response()->json(['error' => 'Exam status not found'], 404);
+        }
+
+        // Update status token menjadi 'close-tab'
+        $examStatus->status_token = 'close-tab';
+        $examStatus->update();
+
+        // Return response yang sukses
+        return response()->json(['message' => 'Exam closed successfully']);
     }
 }
